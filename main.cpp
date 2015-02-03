@@ -1,26 +1,23 @@
 //============================================================================
-// Name        : TestProj.cpp
-// Author      : 
-// Version     :
+// Name        : main.cpp
+// Author      : Daniel Miller
+// Version     : 0.0.1
 // Copyright   : Your copyright notice
-// Description : Hello World in C, Ansi-style
+// Description : Multi-threaded Game of Life implementation
 //============================================================================
-
-//#define _XOPEN_SOURCE 600
-
-//#define SFML_STATIC
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 #include <cstdio>
 #include <ctime>
+#include <pthread.h>
 
-#include "pthread.h"
-#include "TestClass.h"
+#include "Evaluators/Evaluator.h"
+#include "Boards/Board.h"
+
 
 void* runGame(void *arg) {
-	std::cout << "Starting Game!" << std::endl;
 	std::vector<std::vector<bool> > initGrid;
 
 	std::vector<bool> col;
@@ -41,7 +38,7 @@ void* runGame(void *arg) {
 	col.push_back(true);
 	initGrid.push_back(col);
 
-	VectorBoard *board = new VectorBoard(350, 350, true);
+	VectorBoard *board = new VectorBoard(35, 35, true);
 	board->initialize(initGrid);
 
 	int numGenerations = 100;
@@ -53,8 +50,10 @@ void* runGame(void *arg) {
 	start = std::clock();
 	prev = std::clock();
 
+    Evaluator *eval = new ThreadedEvaluator(2, board);
+
 	while(board->getCurrentGeneration() < numGenerations) {
-		board->tick();
+		eval->evaluate(board);
 		std::cout << "Generation: "
 				  << board->getCurrentGeneration()
 				  << "  Duration: "
@@ -73,12 +72,6 @@ void* runGame(void *arg) {
 int main(void) {
 	printf( "Hello World!!! \n\n" );
 	fflush(stdout);
-
-//	pthread_barrier_t barr;
-//	if(pthread_barrier_init(&barr, NULL, 1)) {
-//		printf("Could not create a barrier\n");
-//		return -1;
-//	}
 
 	pthread_t* thr = (pthread_t*)malloc(sizeof(pthread_t));
 	pthread_attr_t threadAttr;

@@ -5,8 +5,8 @@
  *      Author: Daniel
  */
 
-#ifndef GAMEOFLIFE_TESTCLASS_H_
-#define GAMEOFLIFE_TESTCLASS_H_
+#ifndef GAMEOFLIFE_H_
+#define GAMEOFLIFE_H_
 
 #include <stdio.h>
 #include <string>
@@ -26,7 +26,7 @@ public:
 		m_height(height),
 		m_isToroidal(isToroidal),
 		generation(0){ };
-	virtual ~Board();
+	~Board(){ };
 
 	int getWidth() {return m_width;};
 	int getHeight() {return m_height;};
@@ -35,10 +35,10 @@ public:
 
 	virtual void initialize(std::vector<std::vector<bool> > centerData) = 0;
 	virtual char countNeighborsAt(int x, int y) = 0;
-	virtual void tick() = 0;
 
 	virtual int getCell(int x, int y, bool fromBuffer=false) = 0;
 	virtual bool setCell(int x, int y, bool value, bool fromBuffer=false) = 0;
+    virtual void iterationComplete() = 0;
 
 	void print();
 	void reprint();
@@ -59,14 +59,18 @@ public:
 
 	void initialize(std::vector<std::vector<bool> > centerData);
 	char countNeighborsAt(int x, int y);
-	void tick();
 
 	std::vector<std::vector<bool> >* getDisplayGrid();
 	std::vector<std::vector<bool> >* getBufferGrid();
 
 	int getCell(int x, int y, bool fromBuffer=false);
 	bool setCell(int x, int y, bool value, bool fromBuffer=false);
+
+    void iterationComplete() {
+        this->swapBuffers();
+        generation++;
+    };
 };
 
 
-#endif /* GAMEOFLIFE_TESTCLASS_H_ */
+#endif /* GAMEOFLIFE_H_ */
