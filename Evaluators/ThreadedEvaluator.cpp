@@ -38,25 +38,29 @@ public:
 
     void operator()() const
     {
+        while(!should_exit) {
+            std::unique_lock<std::mutex> lk(cvStartMutex);
+            std::cout << "WAITING - Thread #: " << this->threadNumber << std::endl;
 
-        std::unique_lock<std::mutex> lk(cvStartMutex);
-        std::cout << "WAITING - Thread #: " << this->threadNumber << std::endl;
+            if (!condVarStart.wait_for(lk, std::chrono::milliseconds(100), [] {
+                return ready;
+            })) {
+                if (should_exit) return;
+            }
 
-        if(!condVarStart.wait_for(lk, std::chrono::milliseconds(100), []{return ready;})){
-            if(should_exit) return;
-        }
+            std::cout << "Thread #: " << this->threadNumber << std::endl;
+            std::cout << "X: " << this->minX << " - " << this->maxX << std::endl;
+            std::cout << "Y: " << this->minY << " - " << this->maxY << std::endl;
+            std::cout << "Incrementing" << std::endl;
+            threadsComplete.fetch_add(1, std::memory_order_relaxed);
+            std::cout << "Incremented " << threadsComplete << ":" << threadCount << std::endl;
+            std::cout << "Everybody done? " << (threadsComplete >= threadCount) << std::endl;
+            std::cout << std::endl;
 
-        std::cout << "Thread #: " << this->threadNumber << std::endl;
-        std::cout << "X: " << this->minX << " - " << this->maxX << std::endl;
-        std::cout << "Y: " << this->minY << " - " << this->maxY << std::endl;
-        std::cout << "Incrementing" << std::endl;
-        threadsComplete.fetch_add(1, std::memory_order_relaxed);
-        std::cout << "Incremented " << threadsComplete << std::endl;
-        std::cout << std::endl;
-
-        if(threadsComplete == threadCount) {
-            condVarFinish.notify_all();
-            ready = false;
+            if (threadsComplete == threadCount) {
+                condVarFinish.notify_all();
+                ready = false;
+            }
         }
     }
 };
@@ -94,17 +98,20 @@ ThreadedEvaluator::~ThreadedEvaluator() {
 
 void ThreadedEvaluator::evaluate(Board *board) {
     { // Set threads to work
-        std::lock_guard<std::mutex> lk(cvStartMutex);
+//        std::lock_guard<std::mutex> lk(cvStartMutex);
         ready = true;
+//        lk.release();
     }
+    std::cout << "Alerting workers... " << std::endl;
     condVarStart.notify_all();
+    std::cout << "Workers Alerted... " << std::endl;
 
     { // Block until threads complete
         std::unique_lock<std::mutex> lk(cvFinishMutex);
 
         unsigned long threadCount = threads.size();
         condVarFinish.wait(lk, [threadCount]{
-            return threadsComplete == threadCount;
+            return threadsComplete >= threadCount;
         });
 
         threadsComplete.store(0, std::memory_order_relaxed);
